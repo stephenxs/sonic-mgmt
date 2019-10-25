@@ -41,7 +41,7 @@ def connect_mellanox_server():
         mellanox_server.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
         mellanox_server.connect("a_mellanox_server", username="username", password="password")
     except Exception as e:
-        logging.debug("Failed to connect to mellanox server, exception: " + repr(e))
+        logging.warning("Failed to connect to mellanox server, exception: " + repr(e))
     return mellanox_server
 
 
@@ -64,7 +64,7 @@ def find_psu_controller_conf_file(server):
                 result = lines[0].strip()
                 break
     except paramiko.SSHException as e:
-        logging.debug("Failed to find psu controller configuration file location, exception: " + repr(e))
+        logging.warning("Failed to find psu controller configuration file location, exception: " + repr(e))
     return result
 
 
@@ -85,7 +85,7 @@ def get_psu_controller_host(hostname, server, conf_file_location):
                 result = fields[1]
                 break
     except paramiko.SSHException as e:
-        logging.debug("Failed to get psu controller host, exception: " + repr(e))
+        logging.warning("Failed to get psu controller host, exception: " + repr(e))
     return result
 
 
@@ -105,7 +105,7 @@ def get_psu_controller_type(psu_controller_host):
             result = lines[0].strip()
             result = result.replace('"', '')
     except Exception as e:
-        logging.debug("Failed to get psu controller type, exception: " + repr(e))
+        logging.warning("Failed to get psu controller type, exception: " + repr(e))
 
     return result
 
@@ -138,7 +138,7 @@ class SentrySwitchedCDU(PsuControllerBase):
                         # Remove the preceeding PORT_NAME_BASE_OID, remaining string is the PDU port ID
                         self.pdu_ports.append(fields[0].replace(self.PORT_NAME_BASE_OID, ''))
         except Exception as e:
-            logging.debug("Failed to get ports controlling PSUs of DUT, exception: " + repr(e))
+            logging.warning("Failed to get ports controlling PSUs of DUT, exception: " + repr(e))
 
     def __init__(self, hostname, controller):
         PsuControllerBase.__init__(self)
@@ -170,7 +170,7 @@ class SentrySwitchedCDU(PsuControllerBase):
             logging.info("Turned on PSU %s" % str(psu_id))
             return True
         except Exception as e:
-            logging.debug("Failed to turn on PSU %s, exception: %s" % (str(psu_id), repr(e)))
+            logging.warning("Failed to turn on PSU %s, exception: %s" % (str(psu_id), repr(e)))
             return False
 
     def turn_off_psu(self, psu_id):
@@ -195,7 +195,7 @@ class SentrySwitchedCDU(PsuControllerBase):
             logging.info("Turned off PSU %s" % str(psu_id))
             return True
         except Exception as e:
-            logging.debug("Failed to turn off PSU %s, exception: %s" % (str(psu_id), repr(e)))
+            logging.warning("Failed to turn off PSU %s, exception: %s" % (str(psu_id), repr(e)))
             return False
 
     def get_psu_status(self, psu_id=None):
@@ -232,7 +232,7 @@ class SentrySwitchedCDU(PsuControllerBase):
                 results = results[idx:idx+1]
             logging.info("Got PSU status: %s" % str(results))
         except Exception as e:
-            logging.debug("Failed to get psu status, exception: " + repr(e))
+            logging.warning("Failed to get psu status, exception: " + repr(e))
         return results
 
     def close(self):

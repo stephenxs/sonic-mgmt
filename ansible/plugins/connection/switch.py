@@ -98,7 +98,7 @@ class Connection(ConnectionBase):
         # determine the sku
         client.sendline('show version')
         client.expect(['#', '>'])
-        if 'Arista' in client.before:
+        if ('Arista' in client.before) or ('vEOS' in client.before):
             self.sku = 'eos'
         elif 'Cisco' in client.before:
             self.sku = 'nxos'

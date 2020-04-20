@@ -191,5 +191,5 @@ def check_reboot_cause(dut, reboot_cause_expected):
     @param reboot_cause_expected: The expected reboot cause.
     """
     reboot_cause_got = get_reboot_cause(dut)
-    logging.debug("dut {} last reboot-cause {}".format(dut.hostname, reboot_cause_got))
+    logging.info("dut {} last reboot-cause {}, expected {}".format(dut.hostname, reboot_cause_got, reboot_cause_expected))
     return reboot_cause_got == reboot_cause_expected

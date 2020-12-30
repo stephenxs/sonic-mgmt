@@ -10,6 +10,7 @@ import pytest
 from tests.common import config_reload
 from tests.common.utilities import wait_until
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.fixtures.conn_graph_facts import conn_graph_facts
 
 profile_format = 'pg_lossless_{}_{}_profile'
 lossless_profile_pattern = 'pg_lossless_([1-9][0-9]*000)_([1-9][0-9]*m)_profile'
@@ -254,7 +255,7 @@ def check_pool_size(duthost, ingress_lossless_pool_oid, **kwargs):
 
             expected_pool_size = (original_memory - new_reserved) / default_ingress_pool_number
 
-            logging.debug("Expect pool {}, expec shp {}, curr_shp {} default ovs {}".format(expected_pool_size, expected_shp_size, curr_shp_size, default_over_subscribe_ratio))
+            logging.debug("Expected pool {}, expec shp {}, curr_shp {} default ovs {}".format(expected_pool_size, expected_shp_size, curr_shp_size, default_over_subscribe_ratio))
 
 
     def _get_pool_size_from_asic_db(duthost, ingress_lossless_pool_oid):
@@ -884,13 +885,13 @@ def test_headroom_override(duthosts, rand_one_dut_hostname, conn_graph_facts, po
                         new_size = new_size,
                         new_pg_number = 3)
 
-        # Recover configuration
+        # Restore configuration
         logging.info("[Test: static headroom being referenced can not be removed]")
         duthost.shell('config buffer profile remove headroom-override', module_ignore_errors = True)
 
         profile = duthost.shell('redis-cli hgetall "BUFFER_PROFILE_TABLE:headroom-override"')['stdout']
         pytest_assert(profile, 'Headroom override profile has been removed when being referenced')
-        logging.info("[Recover configuration]")
+        logging.info("[Restore configuration]")
         duthost.shell('config interface buffer priority-group lossless remove {}'.format(port_to_test))
         duthost.shell('config interface buffer priority-group lossless add {} 3-4'.format(port_to_test))
 
@@ -941,11 +942,11 @@ def test_shared_headroom_pool_configure(duthosts, rand_one_dut_hostname, conn_gr
               Check whether the shared headroom pool size is equal to the configured number
         5. Testcase: remove the over subscribe ratio configuration while size is configured
             - Check the buffer profiles and shared headroom pool size
-        6. Testcase: remove the shared headroom pool size withover subscribe ratio configured
+        6. Testcase: remove the shared headroom pool size with over subscribe ratio configured
             - Config over subscribe ratio to 2, check whether the shared headroom pool size matches the previous value
             - Remove the size configuration, check whether shared headroom pool is still enabled
         7. Testcase: remove both over subscribe ratio and shared headroom pool size
-        8. Recover configuration
+        8. Restore configuration
     """
     duthost = duthosts[rand_one_dut_hostname]
     original_over_subscribe_ratio = duthost.shell('redis-cli -n 4 hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
@@ -962,7 +963,7 @@ def test_shared_headroom_pool_configure(duthosts, rand_one_dut_hostname, conn_gr
         time.sleep(20)
         profile_oid, pool_oid = check_buffer_profile_details(duthost, initial_asic_db_profiles, expected_profile, None, None)
         logging.info('Got SAI OID of ingress lossless pool: {}'.format(pool_oid))
-        # Recovery the cable length
+        # Restore the cable length
         duthost.shell('config interface cable-length {} {}'.format(port_to_test, original_cable_len))
         time.sleep(20)
 
@@ -1027,7 +1028,7 @@ def test_shared_headroom_pool_configure(duthosts, rand_one_dut_hostname, conn_gr
                         new_pg_number = 0)
         check_buffer_profiles_for_shp(duthost)
 
-        logging.info('[Test: remove both the size and over subscribe ratio]')
+        logging.info('[Test: remove over subscribe ratio]')
         duthost.shell('config buffer shared-headroom-pool over-subscribe-ratio 0')
         check_pool_size(duthost,
                         pool_oid,
@@ -1037,6 +1038,17 @@ def test_shared_headroom_pool_configure(duthosts, rand_one_dut_hostname, conn_gr
                         new_ratio = '0',
                         old_pg_number = 0,
                         new_pg_number = 0)
+
+        logging.info('[Test: remove over subscribe ratio and then the size]')
+        # Configure over subscribe ratio and shared headroom pool size
+        duthost.shell('config buffer shared-headroom-pool over-subscribe-ratio 2')
+        duthost.shell('config buffer shared-headroom-pool size 1024000')
+        check_pool_size(duthost,
+                        pool_oid,
+                        config_shp_size = '1024000')
+        # Remove the over subscribe ratio and then the size
+        duthost.shell('config buffer shared-headroom-pool over-subscribe-ratio 0')
+        duthost.shell('config buffer shared-headroom-pool size 0')
         check_buffer_profiles_for_shp(duthost, shp_enabled = False)
     finally:
         duthost.shell('config buffer shared-headroom-pool over-subscribe-ratio {}'.format(original_over_subscribe_ratio), module_ignore_errors = True)
@@ -1061,7 +1073,7 @@ def test_lossless_pg(duthosts, rand_one_dut_hostname, conn_graph_facts, port_to_
            Verify whether the profile created in step 4 is removed
         6. Reconfigure it as non default dynamic th profile and check related info
         7. Update it to a headroom override profile and check related info
-        8. Recover the configuration
+        8. Restore the configuration
 
     Args:
         port_to_test: On which port will the test be performed
@@ -1154,7 +1166,7 @@ def test_lossless_pg(duthosts, rand_one_dut_hostname, conn_graph_facts, port_to_
         check_pg_profile(duthost, buffer_pg, 'headroom-override')
         check_lossless_profile_removed(duthost, expected_nondef_profile, profile_oid)
 
-        # Update it to dynamic PG, recover
+        # Update it to dynamic PG, restore the configuration
         logging.info('[Testcase: headroom override => dynamic headroom]')
         duthost.shell(set_command)
         check_pg_profile(duthost, buffer_pg, expected_profile)
@@ -1166,7 +1178,7 @@ def test_lossless_pg(duthosts, rand_one_dut_hostname, conn_graph_facts, port_to_
         check_lossless_profile_removed(duthost, 'headroom-override', headroom_override_profile_oid)
         # No need to check non-default-dynamic_th because it won't propagated to APPL_DB
 
-        # revert the cable length
+        # Restore the cable length
         duthost.shell(set_command)
 
         duthost.shell('config interface cable-length {} {}'.format(port_to_test, original_cable_len))

@@ -990,7 +990,7 @@ def test_shared_headroom_pool_configure(duthosts, rand_one_dut_hostname, conn_gr
                         old_pg_number = 0,
                         new_pg_number = 0)
 
-        logging.info('[Test: update over-subscribe-ratio to 4 and sizes of check buffer pool and shared headroom pool]')
+        logging.info('[Test: update over-subscribe-ratio to 4 and check sizes of buffer pool and shared headroom pool]')
         duthost.shell('config buffer shared-headroom-pool over-subscribe-ratio 4')
         check_pool_size(duthost,
                         pool_oid,
